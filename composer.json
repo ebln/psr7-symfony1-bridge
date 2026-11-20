@@ -22,10 +22,16 @@
         "psr/http-message": "^1.1 || ^2.0"
     },
     "require-dev": {
+        "ext-tokenizer": "*",
+        "ergebnis/composer-normalize": "^2.58",
         "friendsofsymfony1/symfony1": "^1.5.23",
         "guzzlehttp/psr7": "^2.12.3",
         "nyholm/psr7": "^1.8",
-        "phpunit/phpunit": "^9.6.33"
+        "phpstan/phpstan": "^2.3",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^9.6.33",
+        "shipmonk/composer-dependency-analyser": "^1.8.4",
+        "symplify/easy-coding-standard": "^13.3.19"
     },
     "conflict": {
         "friendsofsymfony1/symfony1": "<1.5.23"
@@ -41,6 +47,9 @@
         }
     },
     "config": {
+        "allow-plugins": {
+            "ergebnis/composer-normalize": true
+        },
         "platform": {
             "php": "7.4.33"
         },
@@ -52,6 +61,17 @@
         "sort-packages": true
     },
     "scripts": {
+        "analyse": "phpstan analyse --no-progress --memory-limit=512M",
+        "coverage": "XDEBUG_MODE=coverage phpunit --coverage-html coverage --coverage-text --colors=auto",
+        "dependencies": "composer-dependency-analyser",
+        "quality": [
+            "composer normalize --dry-run",
+            "@analyse",
+            "@style-check",
+            "@test"
+        ],
+        "style-check": "ecs check --no-progress-bar --blink",
+        "style-fix": "ecs check --fix --blink",
         "test": "phpunit --no-coverage"
     }
 }

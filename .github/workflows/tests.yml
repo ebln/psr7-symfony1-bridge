@@ -71,26 +71,61 @@ jobs:
         if: matrix.php == '7.4'
         run: .github/ci/run "$PHP" sh -c 'set -o pipefail; find src tests -name "*.php" -print0 | xargs -0 -n1 php -l'
 
+      - name: PHPStan
+        if: matrix.deps == 'locked'
+        run: .github/ci/run "$PHP" vendor/bin/phpstan analyse --no-interaction --no-ansi --no-progress --memory-limit=512M
+
       - name: PHPUnit
         run: .github/ci/run "$PHP" vendor/bin/phpunit --no-coverage --colors=never
+
+      - name: Normalised composer.json
+        if: matrix.static
+        run: .github/ci/run "$PHP" composer normalize --dry-run
+
+      - name: Code style
+        if: matrix.static
+        run: .github/ci/run "$PHP" vendor/bin/ecs check --no-progress-bar --blink
 
       - name: Audit locked dependencies
         if: matrix.static
         run: .github/ci/run "$PHP" composer audit --locked
+
+  dependencies:
+    name: Dependency check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PHP: php7.4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pull images
+        run: docker compose --file .github/ci/compose.yml pull --quiet composer "$PHP"
+
+      - name: Install locked dependencies
+        run: .github/ci/run "$PHP" composer install --prefer-dist --no-progress
+
+      - name: Dependency analyser
+        run: .github/ci/run "$PHP" vendor/bin/composer-dependency-analyser
 
   # The only check a ruleset needs to require. GitHub counts a skipped required
   # job as passed, so this job fails unless every test job reports "success".
   ci-passed:
     name: CI passed
     if: always()
-    needs: [test]
+    needs: [test, dependencies]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Require every test job to succeed
+      - name: Require every job to succeed
         env:
-          RESULT: ${{ needs.test.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          DEPENDENCIES_RESULT: ${{ needs.dependencies.result }}
         run: |
-          echo "Result of the test jobs: $RESULT"
-          test "$RESULT" = success
+          echo "Result of the test jobs: $TEST_RESULT"
+          echo "Result of the dependency check: $DEPENDENCIES_RESULT"
+          test "$TEST_RESULT" = success
+          test "$DEPENDENCIES_RESULT" = success
