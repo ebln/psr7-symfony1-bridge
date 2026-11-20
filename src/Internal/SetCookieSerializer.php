@@ -16,12 +16,6 @@ use ebln\Symfony1\Psr7Bridge\ConversionFailed;
 final class SetCookieSerializer
 {
     /**
-     * The characters that `setrawcookie()` refuses in a name, a value and a path: comma, semicolon, space, tab,
-     * CR, LF, vertical tab and form feed. Written unchecked, they would end the attribute and start another.
-     */
-    private const SEPARATORS = '/[,; \t\r\n\x0B\x0C]/';
-
-    /**
      * @param array<mixed> $cookie keys `name`, `value`, `expire`, `path`, `domain`, `secure`, `httpOnly`, `samesite`;
      *                             a missing key and `null` count as "not set"; a value that is neither scalar nor
      *                             stringable counts as "not set" too
@@ -35,7 +29,7 @@ final class SetCookieSerializer
         if ('' === $name) {
             throw ConversionFailed::because('A cookie has no name');
         }
-        if (1 === preg_match(self::SEPARATORS, $name) || false !== strpos($name, '=')) {
+        if (CookieSeparators::appearIn($name) || false !== strpos($name, '=')) {
             throw ConversionFailed::because('A cookie cannot be written as Set-Cookie: its name holds a separator character');
         }
 
@@ -73,7 +67,7 @@ final class SetCookieSerializer
     private static function checkedText(array $cookie, string $field, string $name): string
     {
         $text = self::text($cookie[$field] ?? null);
-        if (1 === preg_match(self::SEPARATORS, $text)) {
+        if (CookieSeparators::appearIn($text)) {
             throw ConversionFailed::because(sprintf('The cookie "%s" cannot be written as Set-Cookie: its %s holds a separator character', $name, $field));
         }
 
