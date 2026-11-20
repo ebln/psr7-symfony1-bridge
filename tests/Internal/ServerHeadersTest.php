@@ -86,6 +86,14 @@ final class ServerHeadersTest extends TestCase
                 ['HTTP_AUTHORIZATION' => 'Bearer t', 'REDIRECT_HTTP_AUTHORIZATION' => 'Bearer r', 'PHP_AUTH_USER' => 'u'],
                 ['authorization' => 'Bearer t'],
             ],
+            'empty HTTP_AUTHORIZATION stays an empty header' => [
+                ['HTTP_AUTHORIZATION' => ''],
+                ['authorization' => ''],
+            ],
+            'empty HTTP_AUTHORIZATION is not the source' => [
+                ['HTTP_AUTHORIZATION' => '', 'PHP_AUTH_DIGEST' => 'Digest x'],
+                ['authorization' => 'Digest x'],
+            ],
             'redirect fallback' => [
                 ['REDIRECT_HTTP_AUTHORIZATION' => 'Bearer r', 'PHP_AUTH_USER' => 'u', 'PHP_AUTH_PW' => 'p'],
                 ['authorization' => 'Bearer r'],
