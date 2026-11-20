@@ -67,6 +67,7 @@
         "quality": [
             "composer normalize --dry-run",
             "@analyse",
+            "@dependencies",
             "@style-check",
             "@test"
         ],
