@@ -16,7 +16,7 @@ final class ServerHeaders
      *
      * @param array<array-key, mixed> $server
      *
-     * @return array<string, string> lower-case header name to one value
+     * @return array<array-key, string> lower-case header name to one value; PHP turns a name of digits only into an integer key
      */
     public static function fromServer(array $server): array
     {
