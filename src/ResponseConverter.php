@@ -69,14 +69,16 @@ final class ResponseConverter
     }
 
     /**
-     * Symfony stores the status code as it got it: the int 404 and the string '404' both occur. Something that is
-     * not numeric gives 0, which the PSR-7 implementation accepts or rejects.
+     * Symfony stores the status code as it got it: the int 404 and the string '404' both occur. A scalar is cast
+     * to an integer as PHP casts it, so '404 ' and '404abc' give 404. Anything else, and text without a leading
+     * number, gives 0, which the PSR-7 implementation accepts or rejects. is_numeric() is not used: it treats
+     * '404 ' differently on PHP 7.4 and PHP 8.
      *
      * @param mixed $value the stored status code
      */
     private static function integer($value): int
     {
-        return is_numeric($value) ? (int) $value : 0;
+        return is_scalar($value) ? (int) $value : 0;
     }
 
     /**

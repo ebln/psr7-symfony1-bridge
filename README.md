@@ -120,7 +120,7 @@ How a `Set-Cookie` value is parsed:
 
 | Part | Source | Result |
 |---|---|---|
-| Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. A stored code that is not numeric gives 0. A stored text of `null` gives an empty string. |
+| Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. The stored code is cast to an integer as PHP casts it, so `404 ` and `404abc` give 404. Text without a leading number gives 0. A stored text of `null` gives an empty string. |
 | Headers | `getHttpHeaders()` | One value for each name, not split at commas. The names are as symfony stores them, for example `X-Psr-7-Default`. A scalar value is cast to a string. |
 | Cookies | `getCookies()` | One `Set-Cookie` header for each cookie, with `Expires`, `Path`, `Domain`, `Secure`, `HttpOnly` and `SameSite` as stored. An attribute that is empty is left out. There is no `Max-Age`. |
 | Body | `getContent()` | A stream from `createStream()` with the content as a string. A value that is not a string is cast; `null` gives an empty string. |
@@ -191,7 +191,7 @@ Apart from the four cases under [Errors](#errors), the bridge does not check URI
 |---|---|---|
 | Request with the host `foo bar` | Rejected. | Accepted. |
 | Status code 99 or 600 | Rejected. | Accepted. |
-| Stored status code that is not numeric (it arrives as 0) | Rejected. | Accepted, with the code 0. |
+| Stored status code that is text without a leading number (it arrives as 0) | Rejected. | Accepted, with the code 0. |
 | URI without a host, such as `http:///` | Rejected. | Rejected. |
 | Header value with a line break | Rejected. | Rejected. |
 

@@ -54,6 +54,35 @@ abstract class ResponseConverterTestCase extends TestCase
         self::assertSame('Not Found', $converted->getReasonPhrase());
     }
 
+    /**
+     * @return array<string, array{string, int}>
+     */
+    public function partlyNumericStatusProvider(): array
+    {
+        return [
+            'trailing space' => ['404 ', 404],
+            'leading space' => [' 404', 404],
+            'trailing text' => ['404abc', 404],
+        ];
+    }
+
+    /**
+     * The stored code is cast as PHP casts it, on every PHP version. is_numeric() differs between 7.4 and 8.
+     *
+     * @dataProvider partlyNumericStatusProvider
+     */
+    public function testStatusStringWithATrailingPartIsCast(string $stored, int $expected): void
+    {
+        $response = SymfonyObjects::response();
+        $response->setStatusCode($stored, 'Odd');
+        self::assertSame($stored, $response->getStatusCode());
+
+        $converted = $this->converter()->convert($response);
+
+        self::assertSame($expected, $converted->getStatusCode());
+        self::assertSame('Odd', $converted->getReasonPhrase());
+    }
+
     public function testStatusBounds(): void
     {
         $response = SymfonyObjects::response();
