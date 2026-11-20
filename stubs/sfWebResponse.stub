@@ -43,4 +43,12 @@ class sfWebResponse
      * @return array<array-key, mixed>
      */
     public function getHttpHeaders() {}
+
+    /**
+     * Run-time fact: `$this->statusText = null !== $name ? $name : self::$statusTexts[$code];` stores `null` for a code
+     * that the table does not hold, such as 599 (after a notice or warning); the docblock says string.
+     *
+     * @return string|null
+     */
+    public function getStatusText() {}
 }
