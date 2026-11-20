@@ -1,0 +1,7 @@
+# PhpStorm and other JetBrains IDEs
+/.idea/
+
+/vendor/
+/coverage/
+/.phpunit.result.cache
+/.provision/cache/
