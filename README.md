@@ -111,7 +111,7 @@ How a `Set-Cookie` value is parsed:
 - The name and the value are split at the first `=`. A cookie without `=` has an empty value. The value is not decoded. White space around the name and the value is removed, as PHP `trim()` does it: space, tab, CR, LF, NUL and vertical tab.
 - Attribute names are compared without case. An unknown attribute is ignored. When an attribute is repeated, the last one wins.
 - `Max-Age` takes precedence over `Expires`, as RFC 6265 says. `Max-Age` is added to the current time, see [The time source](#the-time-source). A `Max-Age` of 0 or less gives the expiry time 1.
-- `Expires` is read as a date. A date without a time zone is read as UTC. A date before 1970 gives the expiry time 1.
+- `Expires` is read as a date only when it holds a time (`h:m:s`), a day of the month, a month name and a year of two or four digits, as RFC 6265 section 5.1.1 requires. Any other value is ignored, for example `now`, `+1 day`, `-1` or `1445412480`. A date without a time zone is read as UTC. A date before 1970 gives the expiry time 1.
 - `Path` absent or empty gives `/`. `Domain` absent gives an empty string.
 - `Secure` and `HttpOnly` are flags. `SameSite` is passed as written, and is an empty string when absent.
 - When two cookies have the same name, the last one wins. `sfWebResponse::setCookie()` keeps one cookie for each name.
