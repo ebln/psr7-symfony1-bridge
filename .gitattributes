@@ -10,5 +10,6 @@
 /makefile                         export-ignore
 /phpstan.neon.dist                export-ignore
 /phpunit.xml*                     export-ignore
+/stubs                            export-ignore
 /tests                            export-ignore
 /vendor                           export-ignore

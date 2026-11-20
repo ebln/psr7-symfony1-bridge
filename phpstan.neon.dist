@@ -5,3 +5,5 @@ parameters:
     paths:
         - src
         - tests
+    stubFiles:
+        - stubs/sfWebResponse.stub

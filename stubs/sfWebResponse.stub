@@ -1,0 +1,46 @@
+<?php
+
+/*
+ * This stub declares only the methods whose docblock is false at run time. It has no `extends sfResponse`:
+ * with the parent, PHPStan reports `class.notFound` ("extends unknown class sfResponse") when it analyses this file.
+ * A comment on each method quotes the symfony code that proves the fact; the stub states no line numbers,
+ * because they change with the next symfony1 release.
+ */
+class sfWebResponse
+{
+    /**
+     * Run-time fact: the default status code is the int 200 (`protected $statusCode = 200;`).
+     * A `null` $name makes symfony read `self::$statusTexts[$code]`, which emits a notice or warning for a code that the table
+     * does not hold, such as 418; the bridge always passes a string.
+     *
+     * @param int|string  $code HTTP status code
+     * @param string|null $name HTTP status text
+     *
+     * @return void
+     */
+    public function setStatusCode($code, $name = null) {}
+
+    /**
+     * Run-time fact: `if (is_numeric($expire)) { $expire = (int) $expire; }` turns a numeric expiry into an int,
+     * and `'samesite' => $samesite,` stores any string.
+     *
+     * @param string          $name     HTTP header name
+     * @param string          $value    Value for the cookie
+     * @param int|string|null $expire   Cookie expiration period
+     * @param string          $path     Path
+     * @param string          $domain   Domain name
+     * @param bool            $secure   If secure
+     * @param bool            $httpOnly If uses only HTTP
+     * @param string          $samesite If uses Same-site cookies
+     *
+     * @return void
+     */
+    public function setCookie($name, $value, $expire = null, $path = '/', $domain = '', $secure = false, $httpOnly = false, string $samesite = '') {}
+
+    /**
+     * Run-time fact: `return $this->headers;` returns the headers array; the docblock says string.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function getHttpHeaders() {}
+}
