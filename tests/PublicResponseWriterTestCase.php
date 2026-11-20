@@ -147,6 +147,36 @@ abstract class PublicResponseWriterTestCase extends TestCase
         self::assertSame(['a', 'b'], array_keys($target->getCookies()));
     }
 
+    /**
+     * @return array<string, array{string}>
+     */
+    public function symfonySetCookieNameProvider(): array
+    {
+        return [
+            'underscore' => ['Set_Cookie'],
+            'capitals' => ['SET_COOKIE'],
+            'lower case' => ['set_cookie'],
+        ];
+    }
+
+    /**
+     * Symfony stores `Set_Cookie` as `Set-Cookie`. Such a header would bypass the cookie checks.
+     *
+     * @dataProvider symfonySetCookieNameProvider
+     */
+    public function testHeaderThatSymfonyStoresAsSetCookieIsLeftOut(string $name): void
+    {
+        $source = $this->response()
+            ->withHeader($name, 'x=y z; Domain=evil.example')
+            ->withHeader('Set-Cookie', 'a=1');
+        $target = SymfonyObjects::response();
+
+        $this->writer()->write($source, $target);
+
+        self::assertArrayNotHasKey('Set-Cookie', $target->getHttpHeaders());
+        self::assertSame(['a'], array_keys($target->getCookies()));
+    }
+
     public function testExistingStateIsKept(): void
     {
         $target = SymfonyObjects::response();

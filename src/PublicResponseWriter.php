@@ -136,7 +136,9 @@ final class PublicResponseWriter implements ResponseWriter
         $joined = [];
         foreach ($source->getHeaders() as $name => $values) {
             // A name of digits only is an integer key in a PHP array; strtolower() needs a string.
-            if ('set-cookie' !== strtolower((string) $name)) {
+            // sfWebResponse::normalizeHeaderName() turns `_` and a space into `-`: `Set_Cookie` is stored as
+            // `Set-Cookie`, which would pass the cookie checks.
+            if ('set-cookie' !== strtr(strtolower((string) $name), ['_' => '-', ' ' => '-'])) {
                 $joined[$name] = implode(', ', $values);
             }
         }

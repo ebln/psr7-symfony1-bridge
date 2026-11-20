@@ -101,7 +101,7 @@ The target is an existing `sfWebResponse` that you pass in.
 | Existing state | The writer writes on top of it. It removes no header and no cookie. A header of the same name is replaced. See [The writer writes on top](#the-writer-writes-on-top). |
 | Status | `setStatusCode()` with the code and the reason phrase of the PSR-7 response. The phrase is always passed, also when it is empty. |
 | Status 204 | `setHeaderOnly(true)`. The writer never sets it back to `false`. |
-| Headers | `Set-Cookie` is not written as a header. For every other name the writer joins the values with `, ` and calls `setHttpHeader()` once. Symfony normalises the name: `CONTENT-type` becomes `Content-Type`. For a `text/*` type and for a type that ends in `xml` without a charset, symfony adds `; charset=` and its `charset` option. |
+| Headers | `Set-Cookie` is not written as a header. A header that symfony would store under the name `Set-Cookie` is not written either, for example `Set_Cookie`. It is not parsed as a cookie, and it is not an error. For every other name the writer joins the values with `, ` and calls `setHttpHeader()` once. Symfony normalises the name: `CONTENT-type` becomes `Content-Type`. For a `text/*` type and for a type that ends in `xml` without a charset, symfony adds `; charset=` and its `charset` option. |
 | Cookies | Every `Set-Cookie` value is parsed and written with `setCookie()`, see below. |
 | Body | `setContent()` with the body as a string. The writer reads the stream from the start. It does not close the stream. |
 | Protocol version | Not written. The version stays the value of the `http_protocol` option of the `sfWebResponse`. |
