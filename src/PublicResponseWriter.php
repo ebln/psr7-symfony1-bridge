@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ebln\Symfony1\Psr7Bridge;
 
+use ebln\Symfony1\Psr7Bridge\Internal\CookieSeparators;
 use ebln\Symfony1\Psr7Bridge\Internal\SetCookie;
 use ebln\Symfony1\Psr7Bridge\Internal\SetCookieParser;
 use Psr\Http\Message\ResponseInterface;
@@ -97,10 +98,33 @@ final class PublicResponseWriter implements ResponseWriter
 
         $cookies = [];
         foreach ($source->getHeader('Set-Cookie') as $value) {
-            $cookies[] = SetCookieParser::parse($value, $now);
+            $cookie = SetCookieParser::parse($value, $now);
+            self::assertSendable($cookie);
+            $cookies[] = $cookie;
         }
 
         return $cookies;
+    }
+
+    /**
+     * PHP refuses a separator character in the name, the value, the path and the domain of a cookie when symfony sends
+     * the cookie, after the status line and the headers have gone out. PHP sends a samesite value unchanged, so the
+     * writer refuses a separator there as well, because it would add other attributes. The message never holds the
+     * offending text; it holds the name only when the name is clean.
+     *
+     * @throws ConversionFailed
+     */
+    private static function assertSendable(SetCookie $cookie): void
+    {
+        if (CookieSeparators::appearIn($cookie->name)) {
+            throw ConversionFailed::because('A Set-Cookie value cannot be sent by PHP: its cookie name holds a separator character');
+        }
+        $fields = ['value' => $cookie->value, 'path' => $cookie->path ?? '', 'domain' => $cookie->domain, 'samesite' => $cookie->sameSite];
+        foreach ($fields as $field => $text) {
+            if (CookieSeparators::appearIn($text)) {
+                throw ConversionFailed::because(sprintf('The cookie "%s" cannot be sent by PHP: its %s holds a separator character', $cookie->name, $field));
+            }
+        }
     }
 
     /**

@@ -400,6 +400,99 @@ abstract class PublicResponseWriterTestCase extends TestCase
         self::assertSame('payload', $target->getContent());
     }
 
+    /**
+     * @return array<string, array{string}>
+     */
+    public function unsendableCookieProvider(): array
+    {
+        return [
+            'space in value' => ['a=b c'],
+            'comma in value' => ['a=b,c'],
+            'comma-joined line' => ['a=1, b=2'],
+            'space in name' => ['a b=1'],
+            'space in path' => ['a=1; Path=/x y'],
+            'space in domain' => ['a=1; Domain=a b'],
+            'space in samesite' => ['a=1; SameSite=a b'],
+            'tab in value' => ["a=b\tc"],
+        ];
+    }
+
+    /**
+     * @dataProvider unsendableCookieProvider
+     */
+    public function testCookieThatPhpCannotSendFailsBeforeAnyWrite(string $cookie): void
+    {
+        $source = $this->factories()->response->createResponse(404)
+            ->withHeader('X-Foo', 'bar')
+            ->withBody($this->factories()->stream->createStream('payload'))
+            ->withAddedHeader('Set-Cookie', 'ok=1')
+            ->withAddedHeader('Set-Cookie', $cookie);
+        $target = SymfonyObjects::response();
+
+        try {
+            $this->writer()->write($source, $target);
+            self::fail('ConversionFailed expected');
+        } catch (ConversionFailed $e) {
+            self::assertStringContainsString('separator character', $e->getMessage());
+            self::assertStringNotContainsString('payload', $e->getMessage());
+        }
+
+        $this->assertTargetUntouched($target);
+    }
+
+    public function testMessageNamesTheCookieAndTheFieldButNotTheText(): void
+    {
+        $source = $this->response()->withHeader('Set-Cookie', 'sid=secret value');
+
+        try {
+            $this->writer()->write($source, SymfonyObjects::response());
+            self::fail('ConversionFailed expected');
+        } catch (ConversionFailed $e) {
+            self::assertStringContainsString('"sid"', $e->getMessage());
+            self::assertStringContainsString('its value holds', $e->getMessage());
+            self::assertStringNotContainsString('secret', $e->getMessage());
+        }
+    }
+
+    public function testMessageForABadNameDoesNotPrintTheName(): void
+    {
+        $source = $this->response()->withHeader('Set-Cookie', 'my secret=1');
+
+        try {
+            $this->writer()->write($source, SymfonyObjects::response());
+            self::fail('ConversionFailed expected');
+        } catch (ConversionFailed $e) {
+            self::assertStringContainsString('its cookie name holds', $e->getMessage());
+            self::assertStringNotContainsString('secret', $e->getMessage());
+        }
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public function sendableCookieProvider(): array
+    {
+        return [
+            'equals sign in value' => ['a=b=c', 'value', 'b=c'],
+            'percent encoding' => ['a=%20x', 'value', '%20x'],
+            'path' => ['a=1; Path=/a/b', 'path', '/a/b'],
+            'domain with a dot' => ['a=1; Domain=.example.org', 'domain', '.example.org'],
+        ];
+    }
+
+    /**
+     * @dataProvider sendableCookieProvider
+     */
+    public function testCookieWithoutSeparatorsIsWritten(string $cookie, string $field, string $expected): void
+    {
+        $source = $this->response()->withHeader('Set-Cookie', $cookie);
+        $target = SymfonyObjects::response();
+
+        $this->writer()->write($source, $target);
+
+        self::assertSame($expected, self::cookie($target, 'a')[$field]);
+    }
+
     public function testBodyIsWrittenFromTheStart(): void
     {
         $source = $this->response()->withBody($this->factories()->stream->createStream('payload'));
