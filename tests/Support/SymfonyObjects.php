@@ -31,6 +31,7 @@ final class SymfonyObjects
      * @param array<string, mixed> $post
      * @param array<string, mixed> $cookies
      * @param array<string, mixed> $files
+     * @param array<string, mixed> $options the options of sfWebRequest, for example trust_proxy
      */
     public static function request(
         array $server = [],
@@ -38,7 +39,8 @@ final class SymfonyObjects
         array $post = [],
         array $cookies = [],
         array $files = [],
-        ?string $content = null
+        ?string $content = null,
+        array $options = []
     ): \sfWebRequest {
         $_SERVER = array_filter(
             array_merge(self::SERVER_DEFAULTS, $server),
@@ -52,7 +54,7 @@ final class SymfonyObjects
         $_FILES = $files;
 
         if (null === $content) {
-            return new \sfWebRequest(new \sfEventDispatcher());
+            return new \sfWebRequest(new \sfEventDispatcher(), [], [], $options);
         }
 
         // The constructor only calls initialize(), and initialize() reads the content for PUT, PATCH
@@ -63,7 +65,7 @@ final class SymfonyObjects
             $property->setAccessible(true);
         }
         $property->setValue($request, $content);
-        $request->initialize(new \sfEventDispatcher());
+        $request->initialize(new \sfEventDispatcher(), [], [], $options);
 
         return $request;
     }
