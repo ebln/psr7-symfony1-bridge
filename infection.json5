@@ -5,5 +5,62 @@
         "summary": "tools/infection/log/summary.log",
         "perMutator": "tools/infection/log/per-mutator.md"
     },
-    "mutators": { "@default": true }
+    "mutators": {
+        "@default": true,
+
+        // Each entry below names one mutator and the narrowest pattern that Infection allows: class, method and
+        // line. No input gives another result for these mutants, so no test can detect them.
+        "DecrementInteger": {
+            "ignore": [
+                // (int) $found[0] is the same as (int) $found[1]. $found[0] is the whole match, which is the
+                // digits of the group followed by more text, and a cast to int stops at the first character that
+                // is no digit: "07:28:00" gives 7, as the group "07" does. The same holds for the day and the
+                // year, where the group is the whole match. The group stays in the pattern, so that the code
+                // names the part that it reads. An entry hides every mutant of the integers on its line, so the
+                // hour of the time has a line of its own: the mutants of the minute and the second are detected.
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\CookieDate::parse::46",
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\CookieDate::parse::51",
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\CookieDate::parse::55"
+            ]
+        },
+
+        "PregMatchRemoveFlags": {
+            "ignore": [
+                // The D modifier makes `$` match only at the very end. Without it, `$` also matches before a
+                // final line feed. split() trims the value first, and trim() removes line feeds, so no value
+                // that reaches this pattern ends with one. The modifier keeps the pattern exact when split()
+                // changes.
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\SetCookieParser::parse::44"
+            ]
+        },
+
+        "CastInt": {
+            "ignore": [
+                // $maxAge holds digits only here: a value with a minus sign has returned before this line.
+                // Without the cast, the numeric string compares and adds as the integer does, and a string beyond
+                // the integer range becomes a float, which is above the limit as well. PHPStan needs the cast:
+                // without it, it reports `Binary operation "+" between int and string results in an error` and
+                // `should return int|null but returns mixed`.
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\SetCookieParser::expire::95"
+            ]
+        },
+
+        "CastBool": {
+            "ignore": [
+                // flag() returns bool. `is_scalar($value) && $value` is a bool in PHP, and `||` makes the whole
+                // result a bool. PHPStan needs the cast: without it, it reports `Only booleans are allowed in
+                // &&, bool|float|int|string given on the right side`.
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\SetCookieSerializer::flag::101"
+            ]
+        },
+
+        "GreaterThan": {
+            "ignore": [
+                // At $seconds equal to LATEST_EXPIRE - $current, `>` returns $current + $seconds, which is
+                // LATEST_EXPIRE, and `>=` returns LATEST_EXPIRE. Both branches give the same value at the
+                // boundary, and for every other $seconds `>` and `>=` choose alike.
+                "ebln\\Symfony1\\Psr7Bridge\\Internal\\SetCookieParser::expire::98"
+            ]
+        }
+    }
 }
