@@ -234,7 +234,7 @@ try {
 }
 ```
 
-The message of a `ConversionFailed` is the reason, followed by the message of the previous exception when there is one.
+The message of a `ConversionFailed` that the bridge throws is the reason, followed by the message of the previous exception when there is one.
 
 The bridge throws `ConversionFailed` by itself in five cases:
 
