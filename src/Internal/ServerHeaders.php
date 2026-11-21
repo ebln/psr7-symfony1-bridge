@@ -67,7 +67,7 @@ final class ServerHeaders
             $password = $server['PHP_AUTH_PW'] ?? null;
 
             // Credentials are encoded as they are, without trimming.
-            return 'Basic '.base64_encode((string) $user.':'.(is_scalar($password) ? (string) $password : ''));
+            return 'Basic '.base64_encode($user.':'.(is_scalar($password) ? $password : ''));
         }
 
         return self::nonEmpty($server, 'PHP_AUTH_DIGEST');
