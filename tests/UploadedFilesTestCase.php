@@ -108,6 +108,21 @@ abstract class UploadedFilesTestCase extends TestCase
         self::assertSame('content', (string) $file->getStream());
     }
 
+    public function testSizeThatIsNotNumericIsIgnored(): void
+    {
+        $file = $this->fileAt($this->convert(['f' => ['tmp_name' => $this->file, 'error' => 0, 'size' => 'abc']]), 'f');
+
+        self::assertSame(7, $file->getSize());
+    }
+
+    public function testValueBeforeAFileDoesNotEndTheConversion(): void
+    {
+        $tree = $this->convert(['a' => 'x', 'f' => $this->leaf()]);
+
+        self::assertSame('x', $tree['a']);
+        self::assertInstanceOf(UploadedFileInterface::class, $tree['f']);
+    }
+
     public function testValueThatIsNotAFileIsKept(): void
     {
         self::assertSame(['a' => ['b' => 'x']], $this->convert(['a' => ['b' => 'x']]));
