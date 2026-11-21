@@ -56,9 +56,17 @@ jobs:
         if: matrix.deps == 'locked'
         run: .github/ci/run "$PHP" composer install --prefer-dist --no-progress
 
+      # Lowers only the library packages and the packages that the tests need.
+      # The tools keep their locked versions: the Composer cooldown refuses a
+      # tool whose lowest allowed version is younger than 7 days, and this job
+      # runs no tool.
       - name: Install lowest dependencies
         if: matrix.deps == 'lowest'
-        run: .github/ci/run "$PHP" composer update --prefer-lowest --prefer-dist --no-progress
+        run: >-
+          .github/ci/run "$PHP" composer update --prefer-lowest --prefer-dist --no-progress
+          --with-dependencies
+          psr/http-message psr/http-factory guzzlehttp/psr7 nyholm/psr7
+          friendsofsymfony1/symfony1 phpunit/phpunit php-http/psr7-integration-tests
 
       # Composer does not fail the install when it skips a version with a security
       # advisory. Without this step, the job would no longer test the floor.
