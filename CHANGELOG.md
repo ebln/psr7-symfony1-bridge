@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - `PublicResponseWriter` stores a cookie without `Path`, or with an empty `Path`, with an empty path. Before, it stored `/`. symfony now sends such a cookie without `Path`. Before, such a cookie applied to the whole site. Now it applies only to the directory of the request URI. A cookie that must apply to the whole site needs `Path=/`. The difference `roundtrip/cookie-default-path` no longer exists.
+- `composer.json` requires `php-64bit`.
 
 ## [0.1.0] - Unreleased
 

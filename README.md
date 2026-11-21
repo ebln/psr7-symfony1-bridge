@@ -18,7 +18,7 @@ The two objects are independent after a conversion. Every converter reads everyt
 ## Requirements
 
 - PHP 7.4, or PHP 8.1 and later 8.x versions (`composer.json` declares `^7.4 || ^8.1`).
-- 64-bit PHP. The latest expiry time of a cookie, `253402300799`, does not fit in a 32-bit integer.
+- 64-bit PHP. `composer.json` declares `php-64bit`, so Composer refuses the installation on 32-bit PHP. The latest expiry time of a cookie, `253402300799`, does not fit in a 32-bit integer.
 - `psr/http-message` 1.1 or 2.0, and `psr/http-factory` 1.0.
 - Any PSR-17 implementation. It supplies the factories for server requests, responses, streams and uploaded files. The tests of the bridge run with `guzzlehttp/psr7` and with `nyholm/psr7`.
 - `friendsofsymfony1/symfony1` from version 1.5.23. The package does not require it, because your project provides symfony1. It declares `conflict` for `friendsofsymfony1/symfony1` below 1.5.23, so Composer refuses an older version.

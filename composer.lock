@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c6f91d33d6eab8acbedb4146d7845f1b",
+    "content-hash": "abf9ab5a484cd0af811f652ff232f530",
     "packages": [
         {
             "name": "psr/http-factory",
@@ -3981,7 +3981,8 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": "^7.4 || ^8.1"
+        "php": "^7.4 || ^8.1",
+        "php-64bit": "*"
     },
     "platform-dev": {
         "ext-tokenizer": "*"
