@@ -1,0 +1,131 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Monthly, to catch new advisories and changes in the lowest dependency set.
+  schedule:
+    - cron: '41 5 1 * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    # GitHub runs this as "bash --noprofile --norc -eo pipefail {0}".
+    shell: bash
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} (${{ matrix.deps }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Checks that do not depend on the PHP version run once, in the "static" job.
+          - { php: '7.4', deps: locked, static: true }
+          - { php: '7.4', deps: lowest }
+          - { php: '8.1', deps: locked }
+          - { php: '8.2', deps: locked }
+          - { php: '8.3', deps: locked }
+          - { php: '8.4', deps: locked }
+          - { php: '8.5', deps: locked }
+    env:
+      PHP: php${{ matrix.php }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pull images
+        run: docker compose --file .github/ci/compose.yml pull --quiet composer "$PHP"
+
+      - name: Validate composer.json
+        if: matrix.static
+        run: .github/ci/run "$PHP" composer validate --strict
+
+      - name: Install locked dependencies
+        if: matrix.deps == 'locked'
+        run: .github/ci/run "$PHP" composer install --prefer-dist --no-progress
+
+      - name: Install lowest dependencies
+        if: matrix.deps == 'lowest'
+        run: .github/ci/run "$PHP" composer update --prefer-lowest --prefer-dist --no-progress
+
+      # Composer does not fail the install when it skips a version with a security
+      # advisory. Without this step, the job would no longer test the floor.
+      - name: Check the floor versions
+        if: matrix.deps == 'lowest'
+        run: |
+          .github/ci/run "$PHP" php -r 'require "vendor/autoload.php"; foreach (["psr/http-message" => "1.1", "psr/http-factory" => "1.0.0", "friendsofsymfony1/symfony1" => "v1.5.23"] as $package => $floor) { $version = Composer\InstalledVersions::getPrettyVersion($package); echo "$package $version\n"; if ($version !== $floor) { exit(1); } }'
+
+      - name: Lint on PHP 7.4
+        if: matrix.php == '7.4'
+        run: .github/ci/run "$PHP" sh -c 'set -o pipefail; find src tests -name "*.php" -print0 | xargs -0 -n1 php -l'
+
+      - name: PHPStan
+        if: matrix.deps == 'locked'
+        run: .github/ci/run "$PHP" vendor/bin/phpstan analyse --no-interaction --no-ansi --no-progress --memory-limit=512M
+
+      - name: PHPUnit
+        run: .github/ci/run "$PHP" vendor/bin/phpunit --no-coverage --colors=never
+
+      - name: Normalised composer.json
+        if: matrix.static
+        run: .github/ci/run "$PHP" composer normalize --dry-run
+
+      - name: Code style
+        if: matrix.static
+        run: .github/ci/run "$PHP" vendor/bin/ecs check --no-progress-bar --blink
+
+      - name: Audit locked dependencies
+        if: matrix.static
+        run: .github/ci/run "$PHP" composer audit --locked
+
+  dependencies:
+    name: Dependency check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PHP: php7.4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pull images
+        run: docker compose --file .github/ci/compose.yml pull --quiet composer "$PHP"
+
+      - name: Install locked dependencies
+        run: .github/ci/run "$PHP" composer install --prefer-dist --no-progress
+
+      - name: Dependency analyser
+        run: .github/ci/run "$PHP" vendor/bin/composer-dependency-analyser
+
+  # The only check a ruleset needs to require. GitHub counts a skipped required
+  # job as passed, so this job fails unless every test job reports "success".
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [test, dependencies]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every job to succeed
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          DEPENDENCIES_RESULT: ${{ needs.dependencies.result }}
+        run: |
+          echo "Result of the test jobs: $TEST_RESULT"
+          echo "Result of the dependency check: $DEPENDENCIES_RESULT"
+          test "$TEST_RESULT" = success
+          test "$DEPENDENCIES_RESULT" = success

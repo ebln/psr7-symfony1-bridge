@@ -1,0 +1,79 @@
+{
+    "name": "ebln/psr7-symfony1-bridge",
+    "description": "Converts between symfony1 request and response objects and PSR-7 messages",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "symfony1",
+        "psr-7",
+        "psr-17",
+        "http-message",
+        "bridge"
+    ],
+    "authors": [
+        {
+            "name": "ebln",
+            "email": "34722048+ebln@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "php": "^7.4 || ^8.1",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0"
+    },
+    "require-dev": {
+        "ext-tokenizer": "*",
+        "ergebnis/composer-normalize": "^2.58",
+        "friendsofsymfony1/symfony1": "^1.5.23",
+        "guzzlehttp/psr7": "^2.12.3",
+        "nyholm/psr7": "^1.8",
+        "php-http/psr7-integration-tests": "^1.5",
+        "phpstan/phpstan": "^2.3",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^9.6.33",
+        "shipmonk/composer-dependency-analyser": "^1.8.4",
+        "symplify/easy-coding-standard": "^13.3.19"
+    },
+    "conflict": {
+        "friendsofsymfony1/symfony1": "<1.5.23"
+    },
+    "autoload": {
+        "psr-4": {
+            "ebln\\Symfony1\\Psr7Bridge\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ebln\\Symfony1\\Psr7Bridge\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "ergebnis/composer-normalize": true
+        },
+        "platform": {
+            "php": "7.4.33"
+        },
+        "policy": {
+            "cooldown": {
+                "period": "7 days"
+            }
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "analyse": "phpstan analyse --no-progress --memory-limit=512M",
+        "coverage": "XDEBUG_MODE=coverage phpunit --coverage-html coverage --coverage-text --colors=auto",
+        "dependencies": "composer-dependency-analyser",
+        "quality": [
+            "composer normalize --dry-run",
+            "@analyse",
+            "@dependencies",
+            "@style-check",
+            "@test"
+        ],
+        "style-check": "ecs check --no-progress-bar --blink",
+        "style-fix": "ecs check --fix --blink",
+        "test": "phpunit --no-coverage"
+    }
+}
