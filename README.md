@@ -77,7 +77,7 @@ The converters and the writer use public methods of the symfony1 classes only.
 | Body | `getContent()` | A stream from `createStream()` that is positioned at the start. When symfony returns `false`, the stream is empty. |
 | Query params | `getGetParameters()` | Passed unchanged. |
 | Parsed body | `getPostParameters()` | Set only when the media type of the `Content-Type` header is `application/x-www-form-urlencoded` or `multipart/form-data`. The comparison ignores case and parameters such as `charset`. In every other case the parsed body is `null`. |
-| Uploaded files | `getFiles()` | A tree of the same shape, with an `UploadedFileInterface` for each file. The tree can have any depth. `size` and `error` are cast to integers. `name` and `type` can be missing. For an upload with an error other than `UPLOAD_ERR_OK`, the bridge does not open the temporary file, and `getError()` returns the error code. |
+| Uploaded files | `getFiles()` | A tree of the same shape, with an `UploadedFileInterface` for each file. The tree can have any depth. `size` and `error` are converted to integers when they are an integer, a float or a numeric string, as `is_numeric()` decides. Any other `size` is ignored, and the size of the stream is used. Any other `error`, and a missing `error`, counts as `UPLOAD_ERR_OK`. `name` and `type` can be missing. For an upload with an error other than `UPLOAD_ERR_OK`, the bridge does not open the temporary file, and `getError()` returns the error code. |
 | Cookie params | `$_COOKIE` | Passed unchanged. `sfWebRequest::getCookie()` reads the same array, and symfony1 has no method that lists all cookies. |
 | Attributes | none | The result has no attributes. |
 

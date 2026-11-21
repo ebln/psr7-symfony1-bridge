@@ -108,6 +108,38 @@ abstract class UploadedFilesTestCase extends TestCase
         self::assertSame('content', (string) $file->getStream());
     }
 
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function numericSizes(): array
+    {
+        return [
+            'integer' => [3],
+            'float' => [3.0],
+            'numeric string' => ['3'],
+        ];
+    }
+
+    /**
+     * @param mixed $size an integer, a float or a numeric string
+     *
+     * @dataProvider numericSizes
+     */
+    public function testNumericSizeIsConvertedToInt($size): void
+    {
+        $file = $this->fileAt($this->convert(['f' => ['tmp_name' => $this->file, 'error' => 0, 'size' => $size]]), 'f');
+
+        self::assertSame(3, $file->getSize());
+    }
+
+    public function testErrorThatIsNotNumericCountsAsOk(): void
+    {
+        $file = $this->fileAt($this->convert(['f' => ['tmp_name' => $this->file, 'error' => 'abc']]), 'f');
+
+        self::assertSame(\UPLOAD_ERR_OK, $file->getError());
+        self::assertSame('content', (string) $file->getStream());
+    }
+
     public function testSizeThatIsNotNumericIsIgnored(): void
     {
         $file = $this->fileAt($this->convert(['f' => ['tmp_name' => $this->file, 'error' => 0, 'size' => 'abc']]), 'f');
