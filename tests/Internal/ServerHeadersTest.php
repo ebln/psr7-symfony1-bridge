@@ -82,6 +82,10 @@ final class ServerHeadersTest extends TestCase
                 ['HTTP_X_LIST' => ['a'], 'HTTP_X_NULL' => null],
                 [],
             ],
+            'entries that are skipped do not end the mapping' => [
+                [5 => 'a', 'HTTP_X_LIST' => ['a'], 'HTTP_X_B' => 'b'],
+                ['x-b' => 'b'],
+            ],
             'authorization header present' => [
                 ['HTTP_AUTHORIZATION' => 'Bearer t', 'REDIRECT_HTTP_AUTHORIZATION' => 'Bearer r', 'PHP_AUTH_USER' => 'u'],
                 ['authorization' => 'Bearer t'],
