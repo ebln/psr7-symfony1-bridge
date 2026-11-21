@@ -75,6 +75,10 @@ final class CookieDateTest extends TestCase
         yield 'time needs seconds' => ['Wed, 21 Oct 2015 07:28 GMT', null];
         yield 'no time' => ['10 Jan 2030', null];
         yield 'no day, no year' => ['Jan 10:00:00', null];
+        yield 'no day' => ['Jan 2030 10:00:00', null];
+        yield 'no month' => ['21 2015 07:28:00 GMT', null];
+        yield 'text before the time is no time' => ['Wed, 21 Oct 2015 x07:28:00 GMT', null];
+        yield 'text before the year is no year' => ['Wed, 21 Oct x2015 07:28:00 GMT', null];
         yield 'empty string' => ['', null];
         yield 'bytes above ASCII after the date' => ["Wed, 21 Oct 2015 07:28:00 \xFF\xFE", 1445412480];
         yield 'invalid UTF-8 only' => ["\xC3\x28", null];
