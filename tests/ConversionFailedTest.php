@@ -22,6 +22,12 @@ final class ConversionFailedTest extends TestCase
         self::assertSame('No host', ConversionFailed::because('No host')->getMessage());
     }
 
+    public function testCodeIsZero(): void
+    {
+        self::assertSame(0, ConversionFailed::because('No host')->getCode());
+        self::assertSame(0, ConversionFailed::because('No host', new \RuntimeException('x', 5))->getCode());
+    }
+
     public function testPublicConstructor(): void
     {
         $previous = new \InvalidArgumentException('Invalid host');
