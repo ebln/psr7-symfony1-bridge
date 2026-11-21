@@ -56,6 +56,11 @@ final class SetCookieSerializerTest extends TestCase
         self::assertSame('a=b; Path=/', SetCookieSerializer::serialize($this->session(['expire' => 0])));
     }
 
+    public function testStringZeroExpireIsASessionCookie(): void
+    {
+        self::assertSame('a=b; Path=/', SetCookieSerializer::serialize($this->session(['expire' => '0'])));
+    }
+
     public function testEmptyStringExpireIsASessionCookie(): void
     {
         self::assertSame('a=b; Path=/', SetCookieSerializer::serialize($this->session(['expire' => ''])));
