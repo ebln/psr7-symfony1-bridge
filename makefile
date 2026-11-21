@@ -5,7 +5,7 @@ DOCKER_COMPOSE=docker compose -f $(DOCKER_COMPOSE_YML)
 MAKE=make -s
 .DEFAULT_GOAL := help
 
-.PHONY: help build rm down stop enter test quality style-fix coverage
+.PHONY: help build rm down stop enter test quality style-fix coverage mutation
 
 help: ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?##\s*.*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?##\\s*"}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -36,3 +36,7 @@ style-fix:##Fix the code style
 
 coverage:##Generate coverage report
 	$(DOCKER_COMPOSE) run ${DEFAULT_CONTAINER} sh -c "composer coverage && chown -R root:root coverage"
+
+mutation:##Run the mutation tests in the PHP 8.5 image of the CI
+	.github/ci/run php8.5 composer install --working-dir=tools/infection --prefer-dist --no-progress
+	.github/ci/run php8.5 composer mutation

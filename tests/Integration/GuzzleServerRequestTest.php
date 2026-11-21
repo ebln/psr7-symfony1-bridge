@@ -14,8 +14,9 @@ final class GuzzleServerRequestTest extends ServerRequestIntegrationTest
 {
     use BuildsWithFactories;
 
-    // Checked on 2026-11-20 with guzzlehttp/psr7 2.13.3 (composer.lock). Each test below also fails for a plain
-    // guzzlehttp/psr7 object without the bridge. Check again when the locked version changes.
+    // Checked on 2026-11-20 with guzzlehttp/psr7 2.13.3 (composer.lock). testUriPreserveHost_NoHost_Host is skipped
+    // because of the bridge: a converted symfony request always has a host. Every other test below also fails for a
+    // plain guzzlehttp/psr7 object without the bridge. Check again when the locked version changes.
     // The suite can skip only a whole test method, so a skip also covers the data sets that guzzle passes.
     /**
      * @var array<mixed, mixed>

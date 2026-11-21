@@ -18,7 +18,7 @@ The two objects are independent after a conversion. Every converter reads everyt
 ## Requirements
 
 - PHP 7.4, or PHP 8.1 and later 8.x versions (`composer.json` declares `^7.4 || ^8.1`).
-- 64-bit PHP. The latest expiry time of a cookie, `253402300799`, does not fit in a 32-bit integer.
+- 64-bit PHP. `composer.json` declares `php-64bit`, so Composer refuses the installation on 32-bit PHP. The latest expiry time of a cookie, `253402300799`, does not fit in a 32-bit integer.
 - `psr/http-message` 1.1 or 2.0, and `psr/http-factory` 1.0.
 - Any PSR-17 implementation. It supplies the factories for server requests, responses, streams and uploaded files. The tests of the bridge run with `guzzlehttp/psr7` and with `nyholm/psr7`.
 - `friendsofsymfony1/symfony1` from version 1.5.23. The package does not require it, because your project provides symfony1. It declares `conflict` for `friendsofsymfony1/symfony1` below 1.5.23, so Composer refuses an older version.
@@ -77,7 +77,7 @@ The converters and the writer use public methods of the symfony1 classes only.
 | Body | `getContent()` | A stream from `createStream()` that is positioned at the start. When symfony returns `false`, the stream is empty. |
 | Query params | `getGetParameters()` | Passed unchanged. |
 | Parsed body | `getPostParameters()` | Set only when the media type of the `Content-Type` header is `application/x-www-form-urlencoded` or `multipart/form-data`. The comparison ignores case and parameters such as `charset`. In every other case the parsed body is `null`. |
-| Uploaded files | `getFiles()` | A tree of the same shape, with an `UploadedFileInterface` for each file. The tree can have any depth. `size` and `error` are cast to integers. `name` and `type` can be missing. For an upload with an error other than `UPLOAD_ERR_OK`, the bridge does not open the temporary file, and `getError()` returns the error code. |
+| Uploaded files | `getFiles()` | A tree of the same shape, with an `UploadedFileInterface` for each file. The tree can have any depth. `size` and `error` are converted to integers when they are an integer, a float or a numeric string, as `is_numeric()` decides. Any other `size` is ignored, and the size of the stream is used. Any other `error`, and a missing `error`, counts as `UPLOAD_ERR_OK`. `name` and `type` can be missing. For an upload with an error other than `UPLOAD_ERR_OK`, the bridge does not open the temporary file, and `getError()` returns the error code. |
 | Cookie params | `$_COOKIE` | Passed unchanged. `sfWebRequest::getCookie()` reads the same array, and symfony1 has no method that lists all cookies. |
 | Attributes | none | The result has no attributes. |
 
@@ -101,7 +101,7 @@ The target is an existing `sfWebResponse` that you pass in.
 | Existing state | The writer writes on top of it. It removes no header and no cookie. A header of the same name is replaced. See [The writer writes on top](#the-writer-writes-on-top). |
 | Status | `setStatusCode()` with the code and the reason phrase of the PSR-7 response. The phrase is always passed, also when it is empty. |
 | Status 204 | `setHeaderOnly(true)`. The writer never sets it back to `false`. |
-| Headers | `Set-Cookie` is not written as a header. A header that symfony would store under the name `Set-Cookie` is not written either, for example `Set_Cookie`. It is not parsed as a cookie, and it is not an error. For every other name the writer joins the values with `, ` and calls `setHttpHeader()` once. Symfony normalises the name: `CONTENT-type` becomes `Content-Type`. For a `text/*` type and for a type that ends in `xml` without a charset, symfony adds `; charset=` and its `charset` option. |
+| Headers | `Set-Cookie` is not written as a header. A header with another name that would be sent as `Set-Cookie` fails with `ConversionFailed`. That is a name that symfony stores as `Set-Cookie`, for example `Set_Cookie`, and a name whose part before the first `:` is such a name, for example `Set-Cookie:x`. For every other name the writer joins the values with `, ` and calls `setHttpHeader()` once. Symfony normalises the name: `CONTENT-type` becomes `Content-Type`. For a `text/*` type and for a type that ends in `xml` without a charset, symfony adds `; charset=` and its `charset` option. |
 | Cookies | Every `Set-Cookie` value is parsed and written with `setCookie()`, see below. |
 | Body | `setContent()` with the body as a string. The writer reads the stream from the start. It does not close the stream. |
 | Protocol version | Not written. The version stays the value of the `http_protocol` option of the `sfWebResponse`. |
@@ -111,8 +111,8 @@ How a `Set-Cookie` value is parsed:
 - The name and the value are split at the first `=`. A cookie without `=` has an empty value. The value is not decoded. White space around the name and the value is removed, as PHP `trim()` does it: space, tab, CR, LF, NUL and vertical tab.
 - Attribute names are compared without case. An unknown attribute is ignored. When an attribute is repeated, the last one wins.
 - `Max-Age` takes precedence over `Expires`, as RFC 6265 says. `Max-Age` is added to the current time, see [The time source](#the-time-source). A `Max-Age` of 0 or less gives the expiry time 1.
-- `Expires` is read as a date only when it holds a time (`h:m:s`), a day of the month, a month name and a year of two or four digits, as RFC 6265 section 5.1.1 requires. Any other value is ignored, for example `now`, `+1 day`, `-1` or `1445412480`. A date without a time zone is read as UTC. A date before 1970 gives the expiry time 1.
-- `Path` absent or empty gives `/`. `Domain` absent gives an empty string.
+- `Expires` is read with the algorithm of RFC 6265 section 5.1.1. It needs a time (`h:m:s`), a day of the month, a month name and a year of two to four digits (`2*4DIGIT`), in any order. Any other value is ignored, for example `now`, `+1 day`, `-1` or `1445412480`. The parts of the value are read from left to right. Each part fills the first of the four fields (time, day, month, year) that it fits and that is still empty. A part that fits no empty field is ignored, for example `Wed` or `GMT`. The time is read as UTC, so a zone does not move it: `Wed, 21 Oct 2015 08:28:00 +0100` is 08:28 UTC. A number before the year can be read as the year: `Wed Oct 21 07:28:00 +0000 2015` is a date in the year 2000. A year from 70 to 99 is read as 1970 to 1999, and a year from 0 to 69 as 2000 to 2069. These are not a date: a year before 1601, a day of the month of 0 or above 31, an hour above 23, a minute or a second above 59, and a day that the month does not have, such as 31 April. A date before 1970 gives the expiry time 1.
+- `Path` absent or empty gives an empty path. Symfony then sends the cookie without `Path`, and the browser uses the directory of the request URI. `Domain` absent gives an empty string.
 - `Secure` and `HttpOnly` are flags. `SameSite` is passed as written, and is an empty string when absent.
 - When two cookies have the same name, the last one wins. `sfWebResponse::setCookie()` keeps one cookie for each name.
 
@@ -120,8 +120,8 @@ How a `Set-Cookie` value is parsed:
 
 | Part | Source | Result |
 |---|---|---|
-| Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. The stored code is cast to an integer as PHP casts it, so `404 ` and `404abc` give 404. Text without a leading number gives 0. A stored text of `null` gives an empty string. |
-| Headers | `getHttpHeaders()` | One value for each name, not split at commas. The names are as symfony stores them, for example `X-Psr-7-Default`. A scalar value is cast to a string. |
+| Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. A stored code that is a scalar is cast to an integer as PHP casts it, so `'404 '` (with a trailing space) and `'404abc'` give 404. Text without a leading number, and a value that is not a scalar, give 0. A stored text of `null` gives an empty string. |
+| Headers | `getHttpHeaders()` | One value for each name, not split at commas. The names are as symfony stores them, for example `X-Psr-7-Default`. A scalar value is cast to a string. An object with `__toString()` gives its text. Any other value that is not a scalar, for example `null` or an array, gives an empty value. |
 | Cookies | `getCookies()` | One `Set-Cookie` header for each cookie, with `Expires`, `Path`, `Domain`, `Secure`, `HttpOnly` and `SameSite` as stored. An attribute that is empty is left out. There is no `Max-Age`. |
 | Body | `getContent()` | A stream from `createStream()` with the content as a string. A value that is not a string is cast; `null` gives an empty string. |
 | Protocol version | `getOptions()['http_protocol']` | `HTTP/1.0` gives `1.0`, `HTTP/1.1` gives `1.1`. |
@@ -130,14 +130,15 @@ How a `Set-Cookie` value is parsed:
 
 ## Requests of real deployments
 
-- **Host of the URI.** `sfWebRequest::getUri()` takes the host from the header `X-Forwarded-Host` when the symfony option `trust_proxy` is on. It is on by default. When the header holds several values, symfony uses the last one. The host of the PSR-7 URI and the `host` header can then differ. A client controls this host, unless a proxy removes the header. Keep this in mind when you build links from the URI.
+- **Host of the URI.** `sfWebRequest::getUri()` takes the host from the header `X-Forwarded-Host` when the symfony option `trust_proxy` is on. It is on by default. When the header holds several values, symfony uses the last one. The host of the PSR-7 URI and the `host` header can then differ. A client controls this host, unless a proxy removes the header. Keep this in mind when you build links from the URI. When `REQUEST_URI` starts with `http`, the host comes from `REQUEST_URI` instead, see the next item.
+- **Scheme and port of the URI.** When `REQUEST_URI` starts with `http`, symfony uses it as the whole URI. Scheme, host and port then come from `REQUEST_URI`, and the headers and `trust_proxy` described here do not apply. `REQUEST_URI` holds the request target that the client sent. When the web server passes an absolute target on unchanged, for example from the request line `GET http://other.example/ HTTP/1.1`, the client controls scheme, host and port, also with `trust_proxy` off. Otherwise the scheme comes from the server value `HTTPS`. When the symfony option `trust_proxy` is on, the headers `X-Forwarded-Proto: https` and `Ssl-Https: on` also give the scheme `https`. `Ssl-Https: on` and the server value `HTTPS` change the scheme. Symfony then takes the port from the host when the host names one, else from its option `https_port`, else from the server value `SERVER_PORT`, and leaves out only port 443. The host is the `Host` header, or `X-Forwarded-Host` as the previous item describes. A request to port 80 gives `https://example.org:80/` when `https_port` is not set. The header `X-Forwarded-Proto: https` changes the port as well, with `trust_proxy` on and off: symfony removes the port, or uses its option `https_port` when that is set. With `trust_proxy` off, a client can still turn `http://example.org:8080/` into `http://example.org/`. A client controls these headers, unless a proxy removes them.
 - **Method.** Symfony knows the methods GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS. For every other method, for example `PROPFIND`, `getMethod()` returns `GET`, and the converted request has the method `GET`. The server params keep the original method. A `POST` request with the parameter `sf_method`, in the body or in the query, has the method of that parameter. Symfony removes `sf_method` from the parameters.
-- **Error messages.** The message of a `ConversionFailed` ends with the message of the PSR-7 implementation. Such a message can contain data of the request. `guzzlehttp/psr7` repeats a header value that it rejects. A request that cannot be converted is a client error: answer it with status 400, and do not put the message into the response.
+- **Error messages.** When the bridge wraps an exception of the PSR-7 implementation, the message of the `ConversionFailed` ends with the message of that exception. Such a message can contain data of the request. `guzzlehttp/psr7` repeats a header value that it rejects. Most requests that cannot be converted are client errors: answer them with status 400. One case is a state of the server: an upload whose temporary file cannot be opened, although the upload has no error. Do not put the message into the response in either case.
 - **Memory.** Every conversion copies the body as a PHP string, in the request converter, in the response converter and in the writer. A large body needs its size in memory.
 
 ## The time source
 
-The writer needs the current time for one purpose: to turn `Max-Age` into the expiry time that symfony stores. The constructor of `PublicResponseWriter` takes an optional callable that returns a `\DateTimeImmutable`. At run time any `\DateTimeInterface` is accepted. Without the argument the writer uses the system time.
+The writer needs the current time for one purpose: to turn `Max-Age` into the expiry time that symfony stores. The constructor of `PublicResponseWriter` takes an optional callable that returns a `\DateTimeInterface`. Without the argument the writer uses the system time.
 
 The writer asks the time source at most once for each call of `write()`. It asks only when a cookie has a `Max-Age` greater than 0.
 
@@ -169,7 +170,6 @@ A round trip writes a PSR-7 response into an empty `sfWebResponse` and converts 
 | `roundtrip/protocol-version` | The writer does not write the version. The conversion back returns the option `http_protocol` of the `sfWebResponse`. |
 | `roundtrip/cookie-same-name` | Of several cookies with one name, the last one stays. |
 | `roundtrip/cookie-max-age` | Every `Max-Age` becomes an expiry time, because the symfony cookie stores only `expire`. The conversion back writes `Expires` and no `Max-Age`. With a fixed time source the expiry time is exact. |
-| `roundtrip/cookie-default-path` | A cookie without `Path` gets `Path=/`. |
 | `roundtrip/cookie-unknown-attribute` | Unknown attributes are dropped. |
 | `roundtrip/reason-phrase-default` | An empty reason phrase depends on the PSR-7 implementation. `guzzlehttp/psr7` gives an empty phrase its default phrase, for a code that has one, when it creates the response (`OK` for 200). `nyholm/psr7` keeps it empty. When the same implementation builds the source and the result, the phrase does not change: `OK` stays `OK` with guzzle and an empty phrase stays empty with nyholm. |
 | `roundtrip/body-new-stream` | The body is a new stream with the same string content. |
@@ -185,7 +185,7 @@ Identifier: `request/whitespace-only-body-is-empty`.
 
 ### Validation belongs to the PSR-7 implementation
 
-Apart from the four cases under [Errors](#errors), the bridge does not check URIs, status codes or header values itself. It passes them to the PSR-7 implementation and wraps an exception of the implementation in `ConversionFailed`. The two implementations in the tests differ:
+Apart from the five cases under [Errors](#errors), the bridge does not check URIs, status codes or header values itself. It passes them to the PSR-7 implementation and wraps an exception of the implementation in `ConversionFailed`. The two implementations in the tests differ:
 
 | Input | `guzzlehttp/psr7` | `nyholm/psr7` 1.8 |
 |---|---|---|
@@ -234,14 +234,15 @@ try {
 }
 ```
 
-The message of a `ConversionFailed` is the reason, followed by the message of the previous exception when there is one.
+The message of a `ConversionFailed` that the bridge throws is the reason, followed by the message of the previous exception when there is one.
 
-The bridge throws `ConversionFailed` by itself in four cases:
+The bridge throws `ConversionFailed` by itself in five cases:
 
 1. A request without a host (`RequestConverter`).
 2. A `Set-Cookie` value without a cookie name (`PublicResponseWriter`), and a stored cookie without a name (`ResponseConverter`).
 3. A cookie whose name, value, path, domain or `SameSite` holds a comma, a semicolon, a space, a tab, CR, LF, a vertical tab or a form feed. For a cookie stored in symfony, a name that holds `=` fails as well. This applies in both directions. PHP's `setrawcookie()` refuses these characters in the name, the value, the path and the domain when symfony sends the response: PHP 7.4 returns `false` with a warning and PHP 8 throws a `ValueError`. PHP sends a `SameSite` value unchanged, so a separator there would add other attributes. In the other direction, a stored value written unchanged could become a `Set-Cookie` line with other attributes. An example for the writer is the line `Set-Cookie: a=1, b=2`: its value `1, b=2` holds a comma and a space.
 4. A time source that does not return a `\DateTimeInterface`.
+5. A header name other than `Set-Cookie` that would be sent as `Set-Cookie` (`PublicResponseWriter`).
 
 The bridge wraps in `ConversionFailed`, with the original exception as `previous`, every `\Exception` that the PSR-7 implementation throws and every `\Exception` that the time source throws. A body that cannot be read is wrapped in the same way.
 
@@ -250,6 +251,8 @@ When `write()` throws, the `sfWebResponse` is unchanged. The writer reads and ch
 ## Not public API
 
 Everything in the namespace `ebln\Symfony1\Psr7Bridge\Internal` is not public API. Those classes carry `@internal` and can change in any release. Use the classes and interfaces listed under [What it is](#what-it-is) only.
+
+`ConversionFailed::because()` is internal as well. A project that throws a `ConversionFailed` itself, for example in its own `ResponseWriter`, uses the constructor: `new ConversionFailed($message, 0, $previous)`.
 
 ## Relation to `ebln/psr7-symfony1-adapter`
 

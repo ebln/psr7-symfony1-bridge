@@ -139,6 +139,30 @@ abstract class ResponseConverterTestCase extends TestCase
         self::assertSame(['1'], $converted->getHeader('X-True'));
     }
 
+    public function testHeaderValueThatIsNotScalarBecomesAStringOrIsEmpty(): void
+    {
+        $response = SymfonyObjects::response();
+        $stringable = new class {
+            public function __toString(): string
+            {
+                return 'text';
+            }
+        };
+        $this->replaceProperty($response, 'headers', [
+            'X-Stringable' => $stringable,
+            'X-Object' => new \stdClass(),
+            'X-Array' => ['a'],
+            'X-Null' => null,
+        ]);
+
+        $converted = $this->converter()->convert($response);
+
+        self::assertSame(['text'], $converted->getHeader('X-Stringable'));
+        self::assertSame([''], $converted->getHeader('X-Object'));
+        self::assertSame([''], $converted->getHeader('X-Array'));
+        self::assertSame([''], $converted->getHeader('X-Null'));
+    }
+
     public function testCookiesBecomeSetCookieHeaders(): void
     {
         $response = SymfonyObjects::response();

@@ -86,7 +86,7 @@ final class RequestConverter
 
     private function isFormContentType(string $contentType): bool
     {
-        $mediaType = strtolower(trim(explode(';', $contentType, 2)[0]));
+        $mediaType = strtolower(trim(explode(';', $contentType)[0]));
 
         return in_array($mediaType, self::FORM_MEDIA_TYPES, true);
     }

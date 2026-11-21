@@ -123,7 +123,7 @@ abstract class RoundTripTestCase extends TestCase
 
         $back = $this->roundTrip($source);
 
-        self::assertSame(['a=2; Path=/'], $back->getHeader('Set-Cookie'));
+        self::assertSame(['a=2'], $back->getHeader('Set-Cookie'));
     }
 
     /**
@@ -133,16 +133,15 @@ abstract class RoundTripTestCase extends TestCase
     {
         $back = $this->roundTrip($this->response()->withHeader('Set-Cookie', 'a=b; Max-Age=60'));
 
-        self::assertSame(['a=b; Expires=Thu, 01 Jan 2026 00:01:00 GMT; Path=/'], $back->getHeader('Set-Cookie'));
+        self::assertSame(['a=b; Expires=Thu, 01 Jan 2026 00:01:00 GMT'], $back->getHeader('Set-Cookie'));
     }
 
-    /**
-     * roundtrip/cookie-default-path.
-     */
-    public function testCookieDefaultPath(): void
+    public function testCookieWithoutPathStaysWithoutPath(): void
     {
         $back = $this->roundTrip($this->response()->withHeader('Set-Cookie', 'a=b'));
+        self::assertSame(['a=b'], $back->getHeader('Set-Cookie'));
 
+        $back = $this->roundTrip($this->response()->withHeader('Set-Cookie', 'a=b; Path=/'));
         self::assertSame(['a=b; Path=/'], $back->getHeader('Set-Cookie'));
     }
 
@@ -153,7 +152,7 @@ abstract class RoundTripTestCase extends TestCase
     {
         $back = $this->roundTrip($this->response()->withHeader('Set-Cookie', 'a=b; Priority=High'));
 
-        self::assertSame(['a=b; Path=/'], $back->getHeader('Set-Cookie'));
+        self::assertSame(['a=b'], $back->getHeader('Set-Cookie'));
     }
 
     /**
@@ -202,6 +201,7 @@ abstract class RoundTripTestCase extends TestCase
         $response->setContentType('text/html');
         $response->setCookie('a', '1');
         $response->setCookie('n', 'v', 1445412480, '/', '', true, true, 'Lax');
+        $response->setCookie('p', '1', null, '');
         $response->setContent('payload');
         $status = $response->getStatusCode();
         $text = $response->getStatusText();

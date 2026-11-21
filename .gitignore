@@ -5,3 +5,5 @@
 /coverage/
 /.phpunit.result.cache
 /.provision/cache/
+/tools/infection/vendor/
+/tools/infection/log/

@@ -157,6 +157,7 @@ abstract class RequestConverterTestCase extends TestCase
     {
         return [
             'urlencoded with charset' => ['application/x-www-form-urlencoded; charset=UTF-8'],
+            'space before the semicolon' => ['application/x-www-form-urlencoded ; charset=UTF-8'],
             'multipart in mixed case' => ['Multipart/Form-Data; boundary=x'],
         ];
     }
@@ -192,6 +193,41 @@ abstract class RequestConverterTestCase extends TestCase
         $converted = $this->convert(['REQUEST_METHOD' => 'POST'] + $server, [], ['a' => 'b']);
 
         self::assertNull($converted->getParsedBody());
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, array<string, mixed>, string}>
+     */
+    public function proxyHeaderRows(): array
+    {
+        $proto = ['SERVER_PORT' => '8080', 'HTTP_X_FORWARDED_PROTO' => 'https'];
+
+        return [
+            'port 8080' => [['SERVER_PORT' => '8080'], [], 'http://example.org:8080/'],
+            'proto https removes the port' => [$proto, [], 'https://example.org/'],
+            'proto https, trust_proxy off' => [$proto, ['trust_proxy' => false], 'http://example.org/'],
+            'proto https, https_port' => [['HTTP_X_FORWARDED_PROTO' => 'https'], ['https_port' => 8443], 'https://example.org:8443/'],
+            'proto https, https_port, trust_proxy off' => [['HTTP_X_FORWARDED_PROTO' => 'https'], ['trust_proxy' => false, 'https_port' => 8443], 'http://example.org:8443/'],
+            'HTTPS on, port 443' => [['HTTPS' => 'on', 'SERVER_PORT' => '443'], [], 'https://example.org/'],
+            'HTTPS on, port 443, trust_proxy off' => [['HTTPS' => 'on', 'SERVER_PORT' => '443'], ['trust_proxy' => false], 'https://example.org/'],
+            'HTTPS on, port 80' => [['HTTPS' => 'on'], [], 'https://example.org:80/'],
+            'absolute REQUEST_URI' => [['REQUEST_URI' => 'https://other.example:1234/a'], [], 'https://other.example:1234/a'],
+            'Ssl-Https on' => [['HTTP_SSL_HTTPS' => 'on'], [], 'https://example.org:80/'],
+            'Ssl-Https on, trust_proxy off' => [['HTTP_SSL_HTTPS' => 'on'], ['trust_proxy' => false], 'http://example.org/'],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $server
+     * @param array<string, mixed>  $options
+     *
+     * @dataProvider proxyHeaderRows
+     */
+    public function testSchemeAndPortOfTheUriFollowProxyHeaders(array $server, array $options, string $expectedUri): void
+    {
+        $request = SymfonyObjects::request($server, [], [], [], [], null, $options);
+
+        self::assertSame($expectedUri, (string) $this->convertRequest($request)->getUri());
     }
 
     public function testCookieParams(): void

@@ -48,6 +48,32 @@ final class ResponseConverterTest extends ResponseConverterTestCase
         }
     }
 
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public function storedCodeThatIsNotScalarProvider(): array
+    {
+        return ['null' => [null], 'empty array' => [[]], 'array with a value' => [['a']], 'object' => [new \stdClass()]];
+    }
+
+    /**
+     * @param mixed $stored a stored status code that is not a scalar
+     *
+     * @dataProvider storedCodeThatIsNotScalarProvider
+     */
+    public function testStatusThatIsNotScalarBecomesZeroAndIsRejected($stored): void
+    {
+        $response = SymfonyObjects::response();
+        $this->replaceProperty($response, 'statusCode', $stored);
+
+        try {
+            $this->converter()->convert($response);
+            self::fail('ConversionFailed expected');
+        } catch (ConversionFailed $e) {
+            self::assertInstanceOf(\InvalidArgumentException::class, $e->getPrevious());
+        }
+    }
+
     protected function factories(): Factories
     {
         return Factories::guzzle();

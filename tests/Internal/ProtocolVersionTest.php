@@ -33,6 +33,8 @@ final class ProtocolVersionTest extends TestCase
             'null' => [null, '1.1'],
             'garbage' => ['garbage', '1.1'],
             'integer' => [123, '1.1'],
+            'text before HTTP' => ['xHTTP/1.0', '1.1'],
+            'text after the version' => ['HTTP/1.0x', '1.1'],
         ];
     }
 }

@@ -164,17 +164,79 @@ abstract class PublicResponseWriterTestCase extends TestCase
      *
      * @dataProvider symfonySetCookieNameProvider
      */
-    public function testHeaderThatSymfonyStoresAsSetCookieIsLeftOut(string $name): void
+    public function testHeaderThatSymfonyStoresAsSetCookieFails(string $name): void
     {
-        $source = $this->response()
+        $source = $this->factories()->response->createResponse(404)
+            ->withHeader('X-Foo', 'bar')
+            ->withBody($this->factories()->stream->createStream('payload'))
             ->withHeader($name, 'x=y z; Domain=evil.example')
             ->withHeader('Set-Cookie', 'a=1');
         $target = SymfonyObjects::response();
 
-        $this->writer()->write($source, $target);
+        $this->assertWriteFailsAsSetCookie($source, $target, $name);
+    }
 
-        self::assertArrayNotHasKey('Set-Cookie', $target->getHttpHeaders());
-        self::assertSame(['a'], array_keys($target->getCookies()));
+    /**
+     * @return array<string, array{string}>
+     */
+    public function colonSetCookieNameProvider(): array
+    {
+        return [
+            'colon' => ['Set-Cookie:x'],
+            'underscore and colon' => ['set_cookie:x'],
+            'space and colon' => ['Set Cookie:x'],
+            'colon at the end' => ['Set-Cookie:'],
+        ];
+    }
+
+    /**
+     * PHP's `header()` would send `Set-Cookie:x: value` as a `Set-Cookie` header.
+     *
+     * @dataProvider colonSetCookieNameProvider
+     */
+    public function testHeaderNameWhosePartBeforeTheColonIsSetCookieFails(string $name): void
+    {
+        $target = SymfonyObjects::response();
+
+        $this->assertWriteFailsAsSetCookie($this->sourceWithHeaders([$name => ['v']]), $target, $name);
+    }
+
+    /**
+     * Symfony stores `Set Cookie` as `Set-Cookie`. The source is a mock, because the PSR-7
+     * implementations under test reject a name with a space.
+     */
+    public function testHeaderNameWithASpaceThatSymfonyStoresAsSetCookieFails(): void
+    {
+        $target = SymfonyObjects::response();
+
+        $this->assertWriteFailsAsSetCookie($this->sourceWithHeaders(['Set Cookie' => ['v']]), $target, 'Set Cookie');
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public function otherHeaderNameProvider(): array
+    {
+        return [
+            'digit suffix' => ['Set-Cookie2'],
+            'prefix' => ['X-Set-Cookie'],
+            'colon after another name' => ['X:Set-Cookie'],
+            'dash before the colon' => ['Set-Cookie-:x'],
+        ];
+    }
+
+    /**
+     * @dataProvider otherHeaderNameProvider
+     */
+    public function testHeaderNameThatIsNotSentAsSetCookieIsWritten(string $name): void
+    {
+        $target = SymfonyObjects::response();
+
+        $this->writer()->write($this->sourceWithHeaders([$name => ['v']]), $target);
+
+        self::assertSame([], $target->getCookies());
+        self::assertCount(1, $target->getHttpHeaders());
+        self::assertSame('v', $target->getHttpHeader($name));
     }
 
     public function testExistingStateIsKept(): void
@@ -219,15 +281,40 @@ abstract class PublicResponseWriterTestCase extends TestCase
         );
     }
 
-    public function testCookieWithoutPathGetsSymfonysDefault(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public function cookieWithoutPathProvider(): array
     {
-        $source = $this->response()->withHeader('Set-Cookie', 'a=b');
+        return [
+            'no Path' => ['a=b'],
+            'empty Path' => ['a=b; Path='],
+        ];
+    }
+
+    /**
+     * @dataProvider cookieWithoutPathProvider
+     */
+    public function testCookieWithoutPathIsStoredWithAnEmptyPath(string $header): void
+    {
+        $source = $this->response()->withHeader('Set-Cookie', $header);
         $target = SymfonyObjects::response();
 
         $this->writer()->write($source, $target);
 
-        self::assertSame('/', self::cookie($target, 'a')['path']);
+        self::assertSame('', self::cookie($target, 'a')['path']);
         self::assertNull(self::cookie($target, 'a')['expire']);
+    }
+
+    public function testCookieWithoutPathReplacesAStoredCookieWithTheRootPath(): void
+    {
+        $target = SymfonyObjects::response();
+        $target->setCookie('a', 'old'); // symfony stores the path '/'
+
+        $this->writer()->write($this->response()->withHeader('Set-Cookie', 'a=b'), $target);
+
+        self::assertSame('b', self::cookie($target, 'a')['value']);
+        self::assertSame('', self::cookie($target, 'a')['path']);
     }
 
     public function testLastCookieOfANameWins(): void
@@ -612,12 +699,7 @@ abstract class PublicResponseWriterTestCase extends TestCase
     public function testFailingReadOfTheSourceIsWrappedAndLeavesTheTargetUnchanged(string $method): void
     {
         $failure = new \RuntimeException('read failed');
-        $source = $this->createMock(ResponseInterface::class);
-        $source->method('getHeader')->willReturn([]);
-        $source->method('getHeaders')->willReturn([]);
-        $source->method('getBody')->willReturn($this->factories()->stream->createStream('payload'));
-        $source->method('getStatusCode')->willReturn(404);
-        $source->method('getReasonPhrase')->willReturn('Not Found');
+        $source = $this->sourceWithHeaders([]);
         $source->method($method)->willThrowException($failure);
         $target = SymfonyObjects::response();
 
@@ -665,6 +747,36 @@ abstract class PublicResponseWriterTestCase extends TestCase
         self::assertIsArray($cookies[$name]);
 
         return $cookies[$name];
+    }
+
+    /**
+     * @param array<string, array<string>> $headers
+     *
+     * @return ResponseInterface&\PHPUnit\Framework\MockObject\MockObject
+     */
+    private function sourceWithHeaders(array $headers): ResponseInterface
+    {
+        $source = $this->createMock(ResponseInterface::class);
+        $source->method('getHeader')->willReturn([]);
+        $source->method('getHeaders')->willReturn($headers);
+        $source->method('getBody')->willReturn($this->factories()->stream->createStream('payload'));
+        $source->method('getStatusCode')->willReturn(404);
+        $source->method('getReasonPhrase')->willReturn('Not Found');
+
+        return $source;
+    }
+
+    private function assertWriteFailsAsSetCookie(ResponseInterface $source, \sfWebResponse $target, string $name): void
+    {
+        try {
+            $this->writer()->write($source, $target);
+            self::fail('ConversionFailed expected');
+        } catch (ConversionFailed $e) {
+            self::assertStringContainsString('would be sent as Set-Cookie', $e->getMessage());
+            self::assertStringNotContainsString($name, $e->getMessage());
+        }
+
+        $this->assertTargetUntouched($target);
     }
 
     private function assertTargetUntouched(\sfWebResponse $target): void
