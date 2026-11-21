@@ -101,7 +101,7 @@ The target is an existing `sfWebResponse` that you pass in.
 | Existing state | The writer writes on top of it. It removes no header and no cookie. A header of the same name is replaced. See [The writer writes on top](#the-writer-writes-on-top). |
 | Status | `setStatusCode()` with the code and the reason phrase of the PSR-7 response. The phrase is always passed, also when it is empty. |
 | Status 204 | `setHeaderOnly(true)`. The writer never sets it back to `false`. |
-| Headers | `Set-Cookie` is not written as a header. A header that symfony would store under the name `Set-Cookie` is not written either, for example `Set_Cookie`. It is not parsed as a cookie, and it is not an error. For every other name the writer joins the values with `, ` and calls `setHttpHeader()` once. Symfony normalises the name: `CONTENT-type` becomes `Content-Type`. For a `text/*` type and for a type that ends in `xml` without a charset, symfony adds `; charset=` and its `charset` option. |
+| Headers | `Set-Cookie` is not written as a header. A header with another name that would be sent as `Set-Cookie` fails with `ConversionFailed`. That is a name that symfony stores as `Set-Cookie`, for example `Set_Cookie`, and a name whose part before the first `:` is such a name, for example `Set-Cookie:x`. For every other name the writer joins the values with `, ` and calls `setHttpHeader()` once. Symfony normalises the name: `CONTENT-type` becomes `Content-Type`. For a `text/*` type and for a type that ends in `xml` without a charset, symfony adds `; charset=` and its `charset` option. |
 | Cookies | Every `Set-Cookie` value is parsed and written with `setCookie()`, see below. |
 | Body | `setContent()` with the body as a string. The writer reads the stream from the start. It does not close the stream. |
 | Protocol version | Not written. The version stays the value of the `http_protocol` option of the `sfWebResponse`. |
@@ -184,7 +184,7 @@ Identifier: `request/whitespace-only-body-is-empty`.
 
 ### Validation belongs to the PSR-7 implementation
 
-Apart from the four cases under [Errors](#errors), the bridge does not check URIs, status codes or header values itself. It passes them to the PSR-7 implementation and wraps an exception of the implementation in `ConversionFailed`. The two implementations in the tests differ:
+Apart from the five cases under [Errors](#errors), the bridge does not check URIs, status codes or header values itself. It passes them to the PSR-7 implementation and wraps an exception of the implementation in `ConversionFailed`. The two implementations in the tests differ:
 
 | Input | `guzzlehttp/psr7` | `nyholm/psr7` 1.8 |
 |---|---|---|
@@ -235,12 +235,13 @@ try {
 
 The message of a `ConversionFailed` is the reason, followed by the message of the previous exception when there is one.
 
-The bridge throws `ConversionFailed` by itself in four cases:
+The bridge throws `ConversionFailed` by itself in five cases:
 
 1. A request without a host (`RequestConverter`).
 2. A `Set-Cookie` value without a cookie name (`PublicResponseWriter`), and a stored cookie without a name (`ResponseConverter`).
 3. A cookie whose name, value, path, domain or `SameSite` holds a comma, a semicolon, a space, a tab, CR, LF, a vertical tab or a form feed. For a cookie stored in symfony, a name that holds `=` fails as well. This applies in both directions. PHP's `setrawcookie()` refuses these characters in the name, the value, the path and the domain when symfony sends the response: PHP 7.4 returns `false` with a warning and PHP 8 throws a `ValueError`. PHP sends a `SameSite` value unchanged, so a separator there would add other attributes. In the other direction, a stored value written unchanged could become a `Set-Cookie` line with other attributes. An example for the writer is the line `Set-Cookie: a=1, b=2`: its value `1, b=2` holds a comma and a space.
 4. A time source that does not return a `\DateTimeInterface`.
+5. A header name other than `Set-Cookie` that would be sent as `Set-Cookie` (`PublicResponseWriter`).
 
 The bridge wraps in `ConversionFailed`, with the original exception as `previous`, every `\Exception` that the PSR-7 implementation throws and every `\Exception` that the time source throws. A body that cannot be read is wrapped in the same way.
 

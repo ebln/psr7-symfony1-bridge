@@ -130,16 +130,23 @@ final class PublicResponseWriter implements ResponseWriter
     /**
      * @return array<array-key, string> the values of each name joined with `, `, without `Set-Cookie`; PHP turns
      *                                  an all-digit name into an integer key, so the caller casts the key
+     *
+     * @throws ConversionFailed for a name other than `Set-Cookie` that would be sent as `Set-Cookie`
      */
     private function joinHeaders(ResponseInterface $source): array
     {
         $joined = [];
         foreach ($source->getHeaders() as $name => $values) {
-            // A name of digits only is an integer key in a PHP array; strtolower() needs a string.
+            $name = (string) $name; // A name of digits only is an integer key in a PHP array.
             // sfWebResponse::normalizeHeaderName() turns `_` and a space into `-`: `Set_Cookie` is stored as
-            // `Set-Cookie`, which would pass the cookie checks.
-            if ('set-cookie' !== strtr(strtolower((string) $name), ['_' => '-', ' ' => '-'])) {
+            // `Set-Cookie`, which would bypass the cookie checks. PHP's header() sends `Set-Cookie:x: v` as a
+            // `Set-Cookie` header, so the part before the first `:` counts as well.
+            $lower = strtolower($name);
+            $beforeColon = explode(':', $lower, 2)[0];
+            if ('set-cookie' !== strtr($beforeColon, ['_' => '-', ' ' => '-'])) {
                 $joined[$name] = implode(', ', $values);
+            } elseif ('set-cookie' !== $lower) {
+                throw ConversionFailed::because('A header name other than Set-Cookie would be sent as Set-Cookie');
             }
         }
 
