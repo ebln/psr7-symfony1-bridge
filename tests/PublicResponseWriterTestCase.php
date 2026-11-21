@@ -219,15 +219,40 @@ abstract class PublicResponseWriterTestCase extends TestCase
         );
     }
 
-    public function testCookieWithoutPathGetsSymfonysDefault(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public function cookieWithoutPathProvider(): array
     {
-        $source = $this->response()->withHeader('Set-Cookie', 'a=b');
+        return [
+            'no Path' => ['a=b'],
+            'empty Path' => ['a=b; Path='],
+        ];
+    }
+
+    /**
+     * @dataProvider cookieWithoutPathProvider
+     */
+    public function testCookieWithoutPathIsStoredWithAnEmptyPath(string $header): void
+    {
+        $source = $this->response()->withHeader('Set-Cookie', $header);
         $target = SymfonyObjects::response();
 
         $this->writer()->write($source, $target);
 
-        self::assertSame('/', self::cookie($target, 'a')['path']);
+        self::assertSame('', self::cookie($target, 'a')['path']);
         self::assertNull(self::cookie($target, 'a')['expire']);
+    }
+
+    public function testCookieWithoutPathReplacesAStoredCookieWithTheRootPath(): void
+    {
+        $target = SymfonyObjects::response();
+        $target->setCookie('a', 'old'); // symfony stores the path '/'
+
+        $this->writer()->write($this->response()->withHeader('Set-Cookie', 'a=b'), $target);
+
+        self::assertSame('b', self::cookie($target, 'a')['value']);
+        self::assertSame('', self::cookie($target, 'a')['path']);
     }
 
     public function testLastCookieOfANameWins(): void

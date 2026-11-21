@@ -134,6 +134,7 @@ final class SetCookieParserTest extends TestCase
             'Expires at the epoch' => ['a=b; Expires=Thu, 01 Jan 1970 00:00:00 GMT', ['expire' => 1]],
             'Expires before the epoch' => ['a=b; Expires=Wed, 31 Dec 1969 23:00:00 GMT', ['expire' => 1]],
             'repeated attribute, the last one wins' => ['a=b; Path=/x; Path=/y', ['path' => '/y']],
+            'repeated Path, the last one is empty' => ['a=b; Path=/x; Path=', ['path' => null]],
             'repeated valid Max-Age, the last one wins' => ['a=b; Max-Age=60; Max-Age=120', ['expire' => 1767225720]],
             'invalid repeated Max-Age is ignored' => ['a=b; Max-Age=60; Max-Age=abc', ['expire' => 1767225660]],
             'invalid repeated Max-Age leaves a valid Max-Age before Expires' => [

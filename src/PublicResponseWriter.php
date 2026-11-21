@@ -62,7 +62,7 @@ final class PublicResponseWriter implements ResponseWriter
                 $cookie->name,
                 $cookie->value,
                 $cookie->expire,
-                $cookie->path ?? '/',
+                $cookie->path ?? '',
                 $cookie->domain,
                 $cookie->secure,
                 $cookie->httpOnly,

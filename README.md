@@ -112,7 +112,7 @@ How a `Set-Cookie` value is parsed:
 - Attribute names are compared without case. An unknown attribute is ignored. When an attribute is repeated, the last one wins.
 - `Max-Age` takes precedence over `Expires`, as RFC 6265 says. `Max-Age` is added to the current time, see [The time source](#the-time-source). A `Max-Age` of 0 or less gives the expiry time 1.
 - `Expires` is read as a date only when it holds a time (`h:m:s`), a day of the month, a month name and a year of two or four digits, as RFC 6265 section 5.1.1 requires. Any other value is ignored, for example `now`, `+1 day`, `-1` or `1445412480`. A date without a time zone is read as UTC. A date before 1970 gives the expiry time 1.
-- `Path` absent or empty gives `/`. `Domain` absent gives an empty string.
+- `Path` absent or empty gives an empty path. symfony then sends the cookie without `Path`, and the browser uses the directory of the request URI. `Domain` absent gives an empty string.
 - `Secure` and `HttpOnly` are flags. `SameSite` is passed as written, and is an empty string when absent.
 - When two cookies have the same name, the last one wins. `sfWebResponse::setCookie()` keeps one cookie for each name.
 
@@ -169,7 +169,6 @@ A round trip writes a PSR-7 response into an empty `sfWebResponse` and converts 
 | `roundtrip/protocol-version` | The writer does not write the version. The conversion back returns the option `http_protocol` of the `sfWebResponse`. |
 | `roundtrip/cookie-same-name` | Of several cookies with one name, the last one stays. |
 | `roundtrip/cookie-max-age` | Every `Max-Age` becomes an expiry time, because the symfony cookie stores only `expire`. The conversion back writes `Expires` and no `Max-Age`. With a fixed time source the expiry time is exact. |
-| `roundtrip/cookie-default-path` | A cookie without `Path` gets `Path=/`. |
 | `roundtrip/cookie-unknown-attribute` | Unknown attributes are dropped. |
 | `roundtrip/reason-phrase-default` | An empty reason phrase depends on the PSR-7 implementation. `guzzlehttp/psr7` gives an empty phrase its default phrase, for a code that has one, when it creates the response (`OK` for 200). `nyholm/psr7` keeps it empty. When the same implementation builds the source and the result, the phrase does not change: `OK` stays `OK` with guzzle and an empty phrase stays empty with nyholm. |
 | `roundtrip/body-new-stream` | The body is a new stream with the same string content. |
