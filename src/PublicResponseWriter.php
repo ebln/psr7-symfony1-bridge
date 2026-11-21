@@ -142,7 +142,7 @@ final class PublicResponseWriter implements ResponseWriter
             // `Set-Cookie`, which would bypass the cookie checks. PHP's header() sends `Set-Cookie:x: v` as a
             // `Set-Cookie` header, so the part before the first `:` counts as well.
             $lower = strtolower($name);
-            $beforeColon = explode(':', $lower, 2)[0];
+            $beforeColon = explode(':', $lower)[0];
             if ('set-cookie' !== strtr($beforeColon, ['_' => '-', ' ' => '-'])) {
                 $joined[$name] = implode(', ', $values);
             } elseif ('set-cookie' !== $lower) {
