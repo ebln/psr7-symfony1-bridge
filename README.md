@@ -121,7 +121,7 @@ How a `Set-Cookie` value is parsed:
 | Part | Source | Result |
 |---|---|---|
 | Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. A stored code that is a scalar is cast to an integer as PHP casts it, so `'404 '` (with a trailing space) and `'404abc'` give 404. Text without a leading number, and a value that is not a scalar, give 0. A stored text of `null` gives an empty string. |
-| Headers | `getHttpHeaders()` | One value for each name, not split at commas. The names are as symfony stores them, for example `X-Psr-7-Default`. A scalar value is cast to a string. |
+| Headers | `getHttpHeaders()` | One value for each name, not split at commas. The names are as symfony stores them, for example `X-Psr-7-Default`. A scalar value is cast to a string. An object with `__toString()` gives its text. Any other value that is not a scalar, for example `null` or an array, gives an empty value. |
 | Cookies | `getCookies()` | One `Set-Cookie` header for each cookie, with `Expires`, `Path`, `Domain`, `Secure`, `HttpOnly` and `SameSite` as stored. An attribute that is empty is left out. There is no `Max-Age`. |
 | Body | `getContent()` | A stream from `createStream()` with the content as a string. A value that is not a string is cast; `null` gives an empty string. |
 | Protocol version | `getOptions()['http_protocol']` | `HTTP/1.0` gives `1.0`, `HTTP/1.1` gives `1.1`. |
