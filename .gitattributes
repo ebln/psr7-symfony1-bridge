@@ -7,9 +7,11 @@
 /composer.lock                    export-ignore
 /coverage                         export-ignore
 /ecs.php                          export-ignore
+/infection.json5                  export-ignore
 /makefile                         export-ignore
 /phpstan.neon.dist                export-ignore
 /phpunit.xml*                     export-ignore
 /stubs                            export-ignore
 /tests                            export-ignore
+/tools                            export-ignore
 /vendor                           export-ignore

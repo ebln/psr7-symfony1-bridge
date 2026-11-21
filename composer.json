@@ -66,6 +66,10 @@
         "analyse": "phpstan analyse --no-progress --memory-limit=512M",
         "coverage": "XDEBUG_MODE=coverage phpunit --coverage-html coverage --coverage-text --colors=auto",
         "dependencies": "composer-dependency-analyser",
+        "mutation": [
+            "Composer\\Config::disableProcessTimeout",
+            "env -u PHP_BINARY phpdbg -qrr tools/infection/vendor/bin/infection --threads=max"
+        ],
         "quality": [
             "composer normalize --dry-run",
             "@analyse",
