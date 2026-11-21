@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.2.0] - Unreleased
 
+### Added
+
+- Mutation testing with Infection runs as the CI job `Mutation tests`. The job `CI passed` requires it. `make mutation` runs it locally, in the PHP 8.5 image of the CI. The command inside the image is `composer mutation`.
+
 ### Changed
 
 - `PublicResponseWriter` stores a cookie without `Path`, or with an empty `Path`, with an empty path. Before, it stored `/`. symfony now sends such a cookie without `Path`. Before, such a cookie applied to the whole site. Now it applies only to the directory of the request URI. A cookie that must apply to the whole site needs `Path=/`. The difference `roundtrip/cookie-default-path` no longer exists.

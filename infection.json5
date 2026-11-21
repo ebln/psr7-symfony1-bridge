@@ -1,5 +1,7 @@
 {
     "source": { "directories": ["src"] },
+    "minMsi": 100,
+    "minCoveredMsi": 100,
     "logs": {
         "text": "tools/infection/log/infection.log",
         "summary": "tools/infection/log/summary.log",
