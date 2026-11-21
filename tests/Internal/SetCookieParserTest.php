@@ -145,6 +145,9 @@ final class SetCookieParserTest extends TestCase
                 'a=b; Expires='.$date.'; Expires=garbage',
                 ['expire' => 1445412480],
             ],
+            'Max-Age with text after the digits is invalid' => ['a=b; Max-Age=60x; Expires='.$date, ['expire' => 1445412480]],
+            'Max-Age that reaches year 9999 exactly' => ['a=b; Max-Age=251635075199', ['expire' => 253402300799]],
+            'Max-Age one second beyond year 9999' => ['a=b; Max-Age=251635075200', ['expire' => 253402300799]],
             'Max-Age beyond year 9999' => ['a=b; Max-Age=999999999999999', ['expire' => 253402300799]],
             'Max-Age beyond the integer range' => [
                 'a=b; Max-Age=999999999999999999999999999999',
