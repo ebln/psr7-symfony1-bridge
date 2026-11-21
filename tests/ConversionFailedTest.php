@@ -21,4 +21,15 @@ final class ConversionFailedTest extends TestCase
         self::assertSame($previous, $failure->getPrevious());
         self::assertSame('No host', ConversionFailed::because('No host')->getMessage());
     }
+
+    public function testPublicConstructor(): void
+    {
+        $previous = new \InvalidArgumentException('Invalid host');
+        $failure = new ConversionFailed('m', 0, $previous);
+
+        self::assertInstanceOf(BridgeException::class, $failure);
+        self::assertSame('m', $failure->getMessage());
+        self::assertSame(0, $failure->getCode());
+        self::assertSame($previous, $failure->getPrevious());
+    }
 }

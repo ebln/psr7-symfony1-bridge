@@ -120,7 +120,7 @@ How a `Set-Cookie` value is parsed:
 
 | Part | Source | Result |
 |---|---|---|
-| Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. The stored code is cast to an integer as PHP casts it, so `404 ` and `404abc` give 404. Text without a leading number gives 0. A stored text of `null` gives an empty string. |
+| Status | `getStatusCode()`, `getStatusText()` | The code as an integer and the text as a string, both passed to `createResponse()`. The stored code is cast to an integer as PHP casts it, so `'404 '` (with a trailing space) and `'404abc'` give 404. Text without a leading number gives 0. A stored text of `null` gives an empty string. |
 | Headers | `getHttpHeaders()` | One value for each name, not split at commas. The names are as symfony stores them, for example `X-Psr-7-Default`. A scalar value is cast to a string. |
 | Cookies | `getCookies()` | One `Set-Cookie` header for each cookie, with `Expires`, `Path`, `Domain`, `Secure`, `HttpOnly` and `SameSite` as stored. An attribute that is empty is left out. There is no `Max-Age`. |
 | Body | `getContent()` | A stream from `createStream()` with the content as a string. A value that is not a string is cast; `null` gives an empty string. |
@@ -132,12 +132,12 @@ How a `Set-Cookie` value is parsed:
 
 - **Host of the URI.** `sfWebRequest::getUri()` takes the host from the header `X-Forwarded-Host` when the symfony option `trust_proxy` is on. It is on by default. When the header holds several values, symfony uses the last one. The host of the PSR-7 URI and the `host` header can then differ. A client controls this host, unless a proxy removes the header. Keep this in mind when you build links from the URI.
 - **Method.** Symfony knows the methods GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS. For every other method, for example `PROPFIND`, `getMethod()` returns `GET`, and the converted request has the method `GET`. The server params keep the original method. A `POST` request with the parameter `sf_method`, in the body or in the query, has the method of that parameter. Symfony removes `sf_method` from the parameters.
-- **Error messages.** The message of a `ConversionFailed` ends with the message of the PSR-7 implementation. Such a message can contain data of the request. `guzzlehttp/psr7` repeats a header value that it rejects. A request that cannot be converted is a client error: answer it with status 400, and do not put the message into the response.
+- **Error messages.** When the bridge wraps an exception of the PSR-7 implementation, the message of the `ConversionFailed` ends with the message of that exception. Such a message can contain data of the request. `guzzlehttp/psr7` repeats a header value that it rejects. Most requests that cannot be converted are client errors: answer them with status 400. One case is a state of the server: an upload whose temporary file cannot be opened, although the upload has no error. Do not put the message into the response in either case.
 - **Memory.** Every conversion copies the body as a PHP string, in the request converter, in the response converter and in the writer. A large body needs its size in memory.
 
 ## The time source
 
-The writer needs the current time for one purpose: to turn `Max-Age` into the expiry time that symfony stores. The constructor of `PublicResponseWriter` takes an optional callable that returns a `\DateTimeImmutable`. At run time any `\DateTimeInterface` is accepted. Without the argument the writer uses the system time.
+The writer needs the current time for one purpose: to turn `Max-Age` into the expiry time that symfony stores. The constructor of `PublicResponseWriter` takes an optional callable that returns a `\DateTimeInterface`. Without the argument the writer uses the system time.
 
 The writer asks the time source at most once for each call of `write()`. It asks only when a cookie has a `Max-Age` greater than 0.
 
@@ -250,6 +250,8 @@ When `write()` throws, the `sfWebResponse` is unchanged. The writer reads and ch
 ## Not public API
 
 Everything in the namespace `ebln\Symfony1\Psr7Bridge\Internal` is not public API. Those classes carry `@internal` and can change in any release. Use the classes and interfaces listed under [What it is](#what-it-is) only.
+
+`ConversionFailed::because()` is internal as well. A project that throws a `ConversionFailed` itself, for example in its own `ResponseWriter`, uses the constructor: `new ConversionFailed($message, 0, $previous)`.
 
 ## Relation to `ebln/psr7-symfony1-adapter`
 
