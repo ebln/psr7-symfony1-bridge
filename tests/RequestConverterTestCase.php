@@ -157,6 +157,7 @@ abstract class RequestConverterTestCase extends TestCase
     {
         return [
             'urlencoded with charset' => ['application/x-www-form-urlencoded; charset=UTF-8'],
+            'space before the semicolon' => ['application/x-www-form-urlencoded ; charset=UTF-8'],
             'multipart in mixed case' => ['Multipart/Form-Data; boundary=x'],
         ];
     }
